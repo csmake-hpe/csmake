@@ -51,6 +51,13 @@ CSMAKE_LIBRARY_VERSION = "1.10.1"
 #TODO: Nested settings and settings processing needs to be migrated to
 #      Settings.py and fixed to be more generic
 
+#TODO: It may be handy to include a way to push "environment" from the
+#      command line like cpp and make -D FOO=BAR ... not sure I want to do that
+#      This would potentially compromise the "completely specified" aspect
+#      of the tool.  This can be done with shell environment (which is what
+#      would happen anyway) and a module that mapped shell environment
+#      into csmake environment.
+
 #TODO: We need to refactor this into cli stuff and csmake stuff
 
 class CliDriver(object):
@@ -75,7 +82,6 @@ class CliDriver(object):
         self.launchStack = ParallelLaunchStack()
         self.launchStack.append(self)
         self.results = []
-        self.stackDumps = []
         self.buildspecLock = threading.Lock()
         self.buildspec = ConfigParser.RawConfigParser()
         self.buildspec.optionxform = str
@@ -88,8 +94,7 @@ class CliDriver(object):
         self.ttou_handler = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
         tty = None
         try:
-            #tty = os.open('/dev/tty', os.O_RDWR)
-            tty = os.open(os.ctermid(), os.O_RDWR)
+            tty = os.open('/dev/tty', os.O_RDWR)
             os.tcsetpgrp(tty, os.getpgrp())
         except OSError:
             self.log.info("There is no tty to manipulate")
@@ -107,7 +112,7 @@ class CliDriver(object):
             defaultMetadata )
 
 
-    def find_module(self, fullname, path=None):
+    def find_module(self, fullname, path):
         """This is called by python - we do this so that if a module
            imports another module, it has the same import behavior
            as the module lookup"""
@@ -612,11 +617,10 @@ class CliDriver(object):
                 joinpoint,
                 repr(aspect))
             method = None
-            actualPhase = aspect._lookupPhaseShift(phase, aspectdict)
             try:
                 method = aspect._joinPointLookup(
                     joinpoint,
-                    actualPhase,
+                    phase,
                     aspectdict )
             except:
                 aspect.log.exception("Attempt to lookup joinpoint failed")
@@ -785,10 +789,8 @@ class CliDriver(object):
                 execinstance._absorbNewMappedFiles()
                 return execinstance
             method = None
-            actualPhase = execinstance._lookupPhaseShift(phase, stepdict)
-            self.log.devdebug("Actual phase to use for lookup: %s", actualPhase)
             try:
-                method = getattr(execinstance, actualPhase)
+                method = getattr(execinstance, phase)
             except:
                 try:
                     method = getattr(execinstance, "default")
@@ -854,35 +856,28 @@ class CliDriver(object):
                 resultObject.failed()
             return execinstance
         finally:
-            try:
-                self.launchAspects(
-                    aspects,
-                    'end',
-                    phase,
-                    execinstance,
-                    stepdict)
-            finally:
-                lastStackResult = None
-                if len(self.stackDumps):
-                    lastStackResult = self.stackDumps[-1][1]
-                if resultObject is not None and resultObject.params['status'] == "Failed" and not resultObject.isChild(lastStackResult):
-                    self.stackDumps.append((list(self.launchStack), resultObject, phase))
-                if pushedModule:
-                    if self.launchStack[-1] is not execinstance:
-                        self.log.error("DEVERROR: Launch stack not pointing to current launch")
-                        self.log.devdebug("stack top: %s    Instance: %s" %(
-                            self.launchStack[-1],
-                            execinstance ) )
-                    elif self.launchStack[-1] is self:
-                        self.log.error("DEVERROR: Launch stack pointing to engine: Cannot pop")
-                    else:
-                        self.launchStack.pop()
+            self.launchAspects(
+                aspects,
+                'end',
+                phase,
+                execinstance,
+                stepdict)
+            if pushedModule:
+                if self.launchStack[-1] is not execinstance:
+                    self.log.error("DEVERROR: Launch stack not pointing to current launch")
+                    self.log.devdebug("stack top: %s    Instance: %s" %(
+                        self.launchStack[-1],
+                        execinstance ) )
+                elif self.launchStack[-1] is self:
+                    self.log.error("DEVERROR: Launch stack pointing to engine: Cannot pop")
+                else:
+                    self.launchStack.pop()
 
-                if resultObject is not None:
-                    resultObject.chatStatus()
-                    resultObject.chatEnd()
-                self.log.devdebug(" Step Completed: %s" % section)
-                self.log.devdebug("-----------------------------------------")
+            if resultObject is not None:
+                resultObject.chatStatus()
+                resultObject.chatEnd()
+            self.log.devdebug(" Step Completed: %s" % section)
+            self.log.devdebug("-----------------------------------------")
 
     def includeBuildspec(self, spec):
         if not os.path.isfile(spec):
@@ -1209,7 +1204,6 @@ class CliDriver(object):
 
         #TODO: do a build summary
 
-        self.log.dumpStacks(self.stackDumps)
         self.log.chatStatus()
         self.log.chatEnd()
 
