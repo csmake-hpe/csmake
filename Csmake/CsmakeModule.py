@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copyright 2018 Cardinal Peak Technologies
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -313,7 +314,7 @@ class CsmakeModule:
             directory, filename = os.path.split(path)
         else:
             directory = path
-        if len(directory) > 0 and not os.path.exists(directory):
+        if len(directory) > 0 and not os.path.lexists(directory):
             os.makedirs(directory)
 
     def _cleanEnsuredDirectory(self, path, isdirectory=False):
@@ -337,14 +338,31 @@ class CsmakeModule:
         flat = ','.join([ x.strip() for x in rawlist.split('\n') if len(x.strip()) > 0])
         return [ x.strip() for x in flat.split(',') if len(x.strip()) > 0 ]
 
+    def _lookupPhaseShift(self, phase, stepdict):
+        #Allows user to change the phase routed in to the step/aspect
+        newPhase = phase
+        if '**phases' in stepdict:
+            try:
+                shifts = self._parseCommaAndNewlineList(stepdict['**phases'])
+                for shift in shifts:
+                    parts = shift.split('->')
+                    if parts[0].strip() == phase:
+                        self.log.info("**** Phase shift: %s", shift)
+                        newPhase = parts[1]
+                        break
+            except:
+                self.log.exception("There was a problem with the **phases section: %s", stepdict['**phases'])
+                raise
+        return newPhase
+
     def _executeFileMapping(self, stepdict):
         #Get the file manager
         fileManager = self._getFileManager()
         if fileManager is not None:
-            if self.log.devoutput:
-                self.log.devdebug(" ------- ")
-                self.log.devdebug(" File manager state")
-                self.log.devdebug(str(fileManager))
+            if self.log.filetrack:
+                self.log.filetrackerOut(" ------- ")
+                self.log.filetrackerOut(" File manager state")
+                self.log.filetrackerOut(str(fileManager))
         else:
             self.log.error("File Tracking can only be utilized with metadata defined")
             return

@@ -1,6 +1,5 @@
 # <copyright>
-# (c) Copyright 2018 Cardinal Peak Technologies
-# (c) Copyright 2017 Hewlett Packard Enterprise Development LP
+# (c) Copyright 2018 Jeremiah S. Patterson
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -15,19 +14,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # </copyright>
+from Csmake.CsmakeModule import CsmakeModule
 
-[ShellToEnvironment@myshellenv]
-hello=MYSHELLVAR
-another=MYOTHERVAR:default:this
+class Phase(CsmakeModule):
+    """Purpose: To test csmake **phases"""
 
-[Shell@testmyshellenv]
-command=echo %(hello)s
+    def special(self, options):
+        print "phase: special"
+        self.log.passed()
 
-[Shell@testanother]
-command=echo %(another)s
+    def build(self, options):
+        print "phase: build"
+        self.log.passed()
 
-[command@default]
-00=myshellenv, testmyshellenv
-
-[command@another]
-00=myshellenv, testanother
+    def other(self, options):
+        print "phase: other"
+        self.log.passed()
