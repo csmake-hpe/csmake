@@ -1,6 +1,5 @@
 #!/bin/bash
 # <copyright>
-# (c) Copyright 2018 Cardinal Peak Technologies
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -228,8 +227,6 @@ After basic-aspect"
 #Test ShellToEnvironment
 dotest-fail ShellToEnvironmentFail test-ShellToEnvironment.csmake default build
 MYSHELLVAR=blah dotest-cmp ShellToEnvironmentPass test-ShellToEnvironment.csmake default build "blah"
-MYSHELLVAR=this dotest-cmp ShellToEnvironmentAnotherDefault test-ShellToEnvironment.csmake another build "default:this"
-MYOTHERVAR=notdefault MYSHELLVAR=that dotest-cmp ShellToEnvironmentAnotherDefault test-ShellToEnvironment.csmake another build "notdefault"
 
 #Test metadata
 dotest-default metadata-twolevels testmetadata.csmake
@@ -240,8 +237,6 @@ dotest-cmp versioning-mods testmetadata.csmake test-versioning prep "9!~111.123+
 
 #Test file tracking
 dotest file-before-metadata test-filetracking.csmake file-before-metadata build
-dotest-cmp files-kept-thru-metadata test-filetracking.csmake files-kept-thru-metadata build "RUNTESTS.sh"
-dotest-cmp ensure-files-not-kept-thru-metadata test-filetracking.csmake ensure-files-not-kept-thru-metadata build ""
 
 #Test TestPython
 dotest-default test-TestPython test-TestPython.csmake
@@ -249,19 +244,6 @@ dotest-fail test-TestPython-failure test-TestPython.csmake show-failure test
 dotest-fail test-TestPython-coverage test-TestPython.csmake show-bad-coverage test
 dotest-fail test-TestPython-file-coverage test-TestPython.csmake show-bad-file-coverage test
 dotest-fail test-TestPython-insufficient test-TestPython.csmake show-unsufficient test
-
-#Test **phases
-dotest-cmp test-phase-shift test.csmake test-phase-shift build "phase: special"
-dotest-cmp test-phase-unshifted test.csmake test-phase-shift special "phase: special"
-dotest-cmp test-another-phase-shift test.csmake test-another-phase-shift xyzzy "phase: build"
-dotest-cmp test-phase-shift-with-aspects test.csmake test-phase-shift-with-aspects build "phase: aspect, start
-phase: special
-phase: aspect, passed
-phase: aspect, end"
-dotest-cmp test-phase-shift-with-aspects-section test.csmake test-phase-shift-with-aspects aspect "phase: aspect, start
-phase: build
-phase: aspect, passed
-phase: aspect, end"
 
 #####################################
 # Testing footer
